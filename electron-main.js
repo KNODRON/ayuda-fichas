@@ -1,5 +1,4 @@
 // electron-main.js
-
 const { app, BrowserWindow } = require('electron')
 const path = require('path')
 
@@ -11,10 +10,8 @@ async function createWindow() {
   })
 
   if (process.env.NODE_ENV === 'development') {
-    // En desarrollo sirviendo con Vite
-    await win.loadURL('http://localhost:5174')  // o el puerto que te indique Vite
+    await win.loadURL('http://localhost:5174')
   } else {
-    // En producción carga el build estático
     await win.loadFile(path.join(__dirname, 'dist', 'index.html'))
   }
 
