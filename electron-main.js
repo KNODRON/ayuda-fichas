@@ -11,10 +11,10 @@ async function createWindow() {
   })
 
   if (process.env.NODE_ENV === 'development') {
-    // En desarrollo, carga la PWA servida por Vite
-    await win.loadURL('http://localhost:5173')
+    // En desarrollo sirviendo con Vite
+    await win.loadURL('http://localhost:5174')  // o el puerto que te indique Vite
   } else {
-    // En producción, carga el build estático
+    // En producción carga el build estático
     await win.loadFile(path.join(__dirname, 'dist', 'index.html'))
   }
 
