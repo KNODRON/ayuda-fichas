@@ -23,11 +23,6 @@
   "build": {
     "appId": "com.knodron.ayuda-fichas",
     "directories": { "output": "dist_electron" },
-    "files": [
-      "electron-main.js",
-      "dist/**/*",
-      "templates/**/*"
-    ]
+    "files": ["electron-main.js","dist/**/*","templates/**/*"]
   }
 }
-
