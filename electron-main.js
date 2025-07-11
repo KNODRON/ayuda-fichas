@@ -1,5 +1,5 @@
-const { app, BrowserWindow } = require('electron')
-const path = require('path')
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -8,20 +8,21 @@ async function createWindow() {
     webPreferences: {
       contextIsolation: true
     }
-  })
+  });
 
   if (process.env.NODE_ENV === 'development') {
-    // En dev, carga la PWA de Vite en localhost
-    await win.loadURL('http://localhost:5173')
+    // En desarrollo, carga la PWA de Vite
+    await win.loadURL('http://localhost:5173');
   } else {
     // En producción, carga el build estático
-    await win.loadFile(path.join(__dirname, 'dist', 'index.html'))
+    await win.loadFile(path.join(__dirname, 'dist', 'index.html'));
   }
 
-  win.removeMenu()
+  win.removeMenu();
 }
 
-app.whenReady().then(createWindow)
-app.on('window-all-closed', () => app.quit())
+app.whenReady().then(createWindow);
 
-
+app.on('window-all-closed', () => {
+  app.quit();
+});
