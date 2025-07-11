@@ -1,1 +1,17 @@
+{
+  "name": "ayuda-fichas-electron",
+  "version": "0.1.0",
+  "main": "electron-main.js",
+  "scripts": {
+    "dev:web": "cd webapp && npm run dev",
+    "build:web": "cd webapp && npm run build",
+    "start": "npm run build:web && electron .",
+    "dist": "npm run build:web && electron-builder"
+  },
+  "build": {
+    "appId": "com.knodron.ayuda-fichas",
+    "directories": { "output": "dist_electron" },
+    "files": [ "electron-main.js", "webapp/dist/**/*", "webapp/assets/templates/**/*" ]
+  }
+}
 
