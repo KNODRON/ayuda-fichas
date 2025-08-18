@@ -16,8 +16,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   // Coordenadas del radar (ejemplo Santiago)
-  const radarLat = -33.4569;
-  const radarLng = -70.6483;
+  const radarLat = -33.447868;
+  const radarLng = -70.657196;
 
   const map = L.map('map').setView([radarLat, radarLng], 15);
 
@@ -34,7 +34,7 @@
   // Radar marcador
   L.marker([radarLat, radarLng], { icon: radarIcon })
     .addTo(map)
-    .bindPopup("📡 Radar Pasivo<br><small>Ubicación fija</small>");
+    .bindPopup("📡 Radar Pasivo<br><small>Cuartel</small>");
 
   // Detección simulada
   const deteccion = {
