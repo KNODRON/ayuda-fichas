@@ -15,9 +15,9 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  // Coordenadas del radar (oficina, por ejemplo)
-  const radarLat = -33.4478; // Santiago, por ejemplo
-  const radarLng = -70.6571;
+  // Coordenadas del radar (ejemplo Santiago)
+  const radarLat = -33.4569;
+  const radarLng = -70.6483;
 
   const map = L.map('map').setView([radarLat, radarLng], 15);
 
@@ -25,19 +25,20 @@
     attribution: '&copy; OpenStreetMap contributors'
   }).addTo(map);
 
-  // Marcador del radar base
+  // Ícono radar
   const radarIcon = L.icon({
-    iconUrl: 'https://cdn-icons-png.flaticon.com/512/149/149063.png',
-    iconSize: [32, 32]
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/854/854866.png', // Ícono de radar
+    iconSize: [36, 36]
   });
 
+  // Radar marcador
   L.marker([radarLat, radarLng], { icon: radarIcon })
     .addTo(map)
     .bindPopup("📡 Radar Pasivo<br><small>Ubicación fija</small>");
 
-  // Simulación de detección de dron con dirección estimada
+  // Detección simulada
   const deteccion = {
-    lat: radarLat + 0.002, // un poco más al norte
+    lat: radarLat + 0.002,
     lng: radarLng + 0.003,
     frecuencia: "2.4 GHz",
     intensidad: "Alta",
@@ -45,10 +46,10 @@
     hora: "12:43:01"
   };
 
-  // Marcador del dron detectado
+  // Ícono de dron
   const dronIcon = L.icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/3043/3043816.png",
-    iconSize: [28, 28]
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/4380/4380479.png", // Ícono dron
+    iconSize: [30, 30]
   });
 
   L.marker([deteccion.lat, deteccion.lng], { icon: dronIcon })
@@ -61,7 +62,7 @@
       Antena: ${deteccion.antena}
     `);
 
-  // Dibujar una línea entre radar y dron
+  // Flecha de dirección
   L.polyline([[radarLat, radarLng], [deteccion.lat, deteccion.lng]], {
     color: 'red',
     weight: 2,
