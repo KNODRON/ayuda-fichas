@@ -44,6 +44,51 @@
     fillOpacity: 0.2          // bajo contraste
   }).addTo(map).bindPopup("Radio de cobertura: 1.2 km");
 
+  // Coordenadas del radar (igual que las del marcador principal)
+const radarLatLng = L.latLng(-33.447868, -70.657196); // Reemplaza por tu coordenada exacta
+
+// Parámetros del haz
+const radioEnMetros = 1200; // 1.2 km
+const anguloCentral = 0; // 0° = norte
+const apertura = 10; // ángulo total del haz
+
+// Convertir grados a radianes
+function degToRad(deg) {
+  return deg * (Math.PI / 180);
+}
+
+// Función para calcular puntos del haz
+function generarHaz(latlng, angulo, apertura, radio) {
+  const puntos = [latlng];
+  const pasos = 20;
+  const inicio = angulo - apertura / 2;
+  const fin = angulo + apertura / 2;
+
+  for (let i = 0; i <= pasos; i++) {
+    const theta = degToRad(inicio + ((fin - inicio) * i) / pasos);
+    const dx = radio * Math.sin(theta);
+    const dy = -radio * Math.cos(theta); // Negativo porque Leaflet usa Y invertido
+    const destino = L.latLng(
+      latlng.lat + (180 / Math.PI) * (dy / 6378137),
+      latlng.lng + (180 / Math.PI) * (dx / 6378137) / Math.cos(latlng.lat * Math.PI / 180)
+    );
+    puntos.push(destino);
+  }
+
+  return puntos;
+}
+
+// Dibujar el haz como un polígono
+const hazPuntos = generarHaz(radarLatLng, anguloCentral, apertura, radioEnMetros);
+L.polygon(hazPuntos, {
+  color: "limegreen",
+  fillColor: "limegreen",
+  fillOpacity: 0.3,
+  weight: 1,
+  dashArray: "4"
+}).addTo(map);
+
+
   // Detección simulada
   const deteccion = {
     lat: radarLat + 0.002,
