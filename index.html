@@ -1,25 +1,73 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Recordatorios (sin calendario)</title>
-<link rel="manifest" href="manifest.json">
-<style>body{font-family:system-ui;margin:16px} table{border-collapse:separate;border-spacing:0 6px} th,td{padding:6px}</style>
+  <title>Radar Pasivo - Detección de Drones</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; }
+  </style>
 </head>
 <body>
-  <h1>Recordatorios Lu–Vi (2 por día)</h1>
-  <p>Ej.: Lunes 16:00 “Martina y Roberto”; Martes 15:45 “Martina”; 16:00 “Roberto”.</p>
 
-  <table>
-    <thead><tr><th>Día</th><th>Hora 1</th><th>Mensaje 1</th><th>Hora 2</th><th>Mensaje 2</th></tr></thead>
-    <tbody id="tbody"></tbody>
-  </table>
+<div id="map"></div>
 
-  <p><button id="enable">🔔 Activar notificaciones</button>
-     <button id="save">💾 Guardar horario</button></p>
-  <pre id="log" style="font-size:.9rem;background:#f6f6f6;padding:8px;border:1px solid #ddd;max-width:800px;white-space:pre-wrap"></pre>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Coordenadas del radar (oficina, por ejemplo)
+  const radarLat = -33.4569; // Santiago, por ejemplo
+  const radarLng = -70.6483;
 
-<script src="app.js"></script>
+  const map = L.map('map').setView([radarLat, radarLng], 15);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Marcador del radar base
+  const radarIcon = L.icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/149/149063.png',
+    iconSize: [32, 32]
+  });
+
+  L.marker([radarLat, radarLng], { icon: radarIcon })
+    .addTo(map)
+    .bindPopup("📡 Radar Pasivo<br><small>Ubicación fija</small>");
+
+  // Simulación de detección de dron con dirección estimada
+  const deteccion = {
+    lat: radarLat + 0.002, // un poco más al norte
+    lng: radarLng + 0.003,
+    frecuencia: "2.4 GHz",
+    intensidad: "Alta",
+    antena: "Norte",
+    hora: "12:43:01"
+  };
+
+  // Marcador del dron detectado
+  const dronIcon = L.icon({
+    iconUrl: "https://cdn-icons-png.flaticon.com/512/3043/3043816.png",
+    iconSize: [28, 28]
+  });
+
+  L.marker([deteccion.lat, deteccion.lng], { icon: dronIcon })
+    .addTo(map)
+    .bindPopup(`
+      🛸 <b>Detección de dron</b><br>
+      Hora: ${deteccion.hora}<br>
+      Frecuencia: ${deteccion.frecuencia}<br>
+      Intensidad: ${deteccion.intensidad}<br>
+      Antena: ${deteccion.antena}
+    `);
+
+  // Dibujar una línea entre radar y dron
+  L.polyline([[radarLat, radarLng], [deteccion.lat, deteccion.lng]], {
+    color: 'red',
+    weight: 2,
+    dashArray: '5, 5'
+  }).addTo(map);
+</script>
+
 </body>
 </html>
