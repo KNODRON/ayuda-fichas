@@ -36,6 +36,14 @@
     .addTo(map)
     .bindPopup("📡 Radar Pasivo<br><small>Cuartel</small>");
 
+    // 🔰 CÍRCULO DE COBERTURA (1.2 km)
+  L.circle([radarLat, radarLng], {
+    radius: 1200,             // 1.2 km
+    color: '#2ecc71',         // borde verde
+    fillColor: '#2ecc71',     // relleno verde
+    fillOpacity: 0.2          // bajo contraste
+  }).addTo(map).bindPopup("Radio de cobertura: 1.2 km");
+
   // Detección simulada
   const deteccion = {
     lat: radarLat + 0.002,
