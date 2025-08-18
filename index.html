@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recordatorios Lu–Vi</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <style>
+    :root{
+      --bg:#0b1220; --card:#111827; --muted:#9ca3af; --text:#e5e7eb; --accent:#0ea5e9; --ok:#10b981; --warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(160deg,#0b1220,#0e1630);color:var(--text);
+         font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Noto Sans",Arial}
+    header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}
+    h1{font-size:1.1rem;margin:0;font-weight:700;letter-spacing:.3px}
+    .container{max-width:960px;margin:0 auto;padding:12px}
+    .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .row{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:720px){.row{grid-template-columns:1fr 1fr}}
+    label{font-size:.85rem;color:var(--muted)}
+    input[type="time"],input[type="text"],select,button{
+      width:100%;padding:12px 12px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:var(--text)
+    }
+    button{cursor:pointer;font-weight:600}
+    .btn{background:var(--accent);border-color:transparent}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .btn-secondary{background:#1f2937;border-color:#374151}
+    .pill{background:#0f172a;border:1px dashed #334155;border-radius:14px;padding:8px 12px;display:inline-flex;gap:8px;align-items:center}
+    .list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+    .entry{display:flex;gap:8px;align-items:center;justify-content:space-between;background:#0f172a;border:1px solid #1f2937;border-radius:12px;padding:10px}
+    .tiny{font-size:.8rem;color:var(--muted)}
+    .tag{font-size:.75rem;background:#0b132a;border:1px solid #20314f;color:#9ac7ff;padding:2px 8px;border-radius:999px;margin-left:6px}
+    .hint{font-size:.85rem;color:var(--muted);margin-top:8px}
+    .ok{color:var(--ok)} .warn{color:var(--warn)}
+    footer{padding:18px 20px;color:#93a0b4;text-align:center}
+    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+         background:#0b132a;border:1px solid #22314f;border-radius:8px;padding:2px 6px}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Recordatorios (Lu–Vi) — PWA</h1>
+    <button id="installBtn" class="btn-secondary" hidden>Instalar</button>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Días</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+            <label class="pill"><input type="checkbox" class="dow" value="MO" checked> &nbsp;Lun</label>
+            <label class="pill"><input type="checkbox" class="dow" value="TU" checked> &nbsp;Mar</label>
+            <label class="pill"><input type="checkbox" class="dow" value="WE" checked> &nbsp;Mié</label>
+            <label class="pill"><input type="checkbox" class="dow" value="TH" checked> &nbsp;Jue</label>
+            <label class="pill"><input type="checkbox" class="dow" value="FR" checked> &nbsp;Vie</label>
+          </div>
+        </div>
+        <div>
+          <label>Hora</label>
+          <input id="timeInput" type="time" value="16:00" />
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <div>
+          <label>Mensaje</label>
+          <input id="msgInput" type="text" placeholder="Ej: Martina y Roberto" value="Martina y Roberto" />
+        </div>
+        <div style="display:flex;gap:8px;align-items:end">
+          <button id="addBtn" class="btn">Agregar recordatorio</button>
+          <button id="clearBtn" class="btn-secondary">Limpiar todo</button>
+        </div>
+      </div>
+
+      <p class="hint">
+        Sugerencia del ejemplo: añade <span class="tag">Lun 16:00 — “Martina y Roberto”</span>,
+        <span class="tag">Mar 15:45 — “Martina”</span> y <span class="tag">Mar 16:00 — “Roberto”</span>.
+      </p>
+
+      <div class="list" id="list"></div>
+
+      <div class="row" style="margin-top:16px">
+        <div>
+          <button id="icsBtn" class="btn">Crear eventos en Calendario (.ics)</button>
+          <p class="hint">Abre el .ics y confirma. Quedan como eventos semanales de lunes a viernes con notificaciones del sistema.</p>
+        </div>
+        <div>
+          <button id="schedBtn" class="btn-secondary">Programar notificaciones locales (Android)</button>
+          <p id="schedInfo" class="hint tiny"></p>
+        </div>
+      </div>
+
+      <p id="permInfo" class="hint" style="margin-top:8px"></p>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <strong>Cómo funciona (resumen corto)</strong>
+      <ul>
+        <li>El botón <span class="kbd">.ics</span> te crea eventos recurrentes fiables en el calendario del teléfono (iOS y Android).</li>
+        <li>El botón de notificaciones locales intenta usar una API nueva de Chrome Android; si no está disponible, te avisará.</li>
+        <li>Instálala con el botón “Instalar” arriba para usarla como app.</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>Hecho con ❤️ · Funciona sin conexión</footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
+
