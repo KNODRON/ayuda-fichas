@@ -1,114 +1,149 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Recordatorios Lu–Vi</title>
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0ea5e9" />
-  <style>
-    :root{
-      --bg:#0b1220; --card:#111827; --muted:#9ca3af; --text:#e5e7eb; --accent:#0ea5e9; --ok:#10b981; --warn:#f59e0b;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:linear-gradient(160deg,#0b1220,#0e1630);color:var(--text);
-         font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Noto Sans",Arial}
-    header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}
-    h1{font-size:1.1rem;margin:0;font-weight:700;letter-spacing:.3px}
-    .container{max-width:960px;margin:0 auto;padding:12px}
-    .card{background:var(--card);border:1px solid #1f2937;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .row{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:720px){.row{grid-template-columns:1fr 1fr}}
-    label{font-size:.85rem;color:var(--muted)}
-    input[type="time"],input[type="text"],select,button{
-      width:100%;padding:12px 12px;border-radius:10px;border:1px solid #334155;background:#0f172a;color:var(--text)
-    }
-    button{cursor:pointer;font-weight:600}
-    .btn{background:var(--accent);border-color:transparent}
-    .btn:disabled{opacity:.6;cursor:not-allowed}
-    .btn-secondary{background:#1f2937;border-color:#374151}
-    .pill{background:#0f172a;border:1px dashed #334155;border-radius:14px;padding:8px 12px;display:inline-flex;gap:8px;align-items:center}
-    .list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
-    .entry{display:flex;gap:8px;align-items:center;justify-content:space-between;background:#0f172a;border:1px solid #1f2937;border-radius:12px;padding:10px}
-    .tiny{font-size:.8rem;color:var(--muted)}
-    .tag{font-size:.75rem;background:#0b132a;border:1px solid #20314f;color:#9ac7ff;padding:2px 8px;border-radius:999px;margin-left:6px}
-    .hint{font-size:.85rem;color:var(--muted);margin-top:8px}
-    .ok{color:var(--ok)} .warn{color:var(--warn)}
-    footer{padding:18px 20px;color:#93a0b4;text-align:center}
-    .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-         background:#0b132a;border:1px solid #22314f;border-radius:8px;padding:2px 6px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Recordatorios (2 por día, Lu–Vi)</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0ea5e9" />
+<style>
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial;background:#0b1220;color:#e5e7eb}
+  .wrap{max-width:900px;margin:0 auto;padding:16px}
+  h1{font-size:1.1rem;margin:0 0 12px}
+  table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  th,td{padding:8px}
+  .row{background:#111827;border:1px solid #1f2937;border-radius:12px}
+  input[type="time"],input[type="text"]{width:100%;padding:10px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#e5e7eb}
+  button{padding:12px 14px;border:0;border-radius:10px;cursor:pointer;font-weight:600}
+  .btn{background:#0ea5e9;color:#081018}
+  .muted{color:#9ca3af;font-size:.9rem}
+  .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  #installBtn{background:#1f2937}
+</style>
 </head>
 <body>
-  <header>
-    <h1>Recordatorios (Lu–Vi) — PWA</h1>
-    <button id="installBtn" class="btn-secondary" hidden>Instalar</button>
-  </header>
-
-  <div class="container">
-    <div class="card">
-      <div class="row">
-        <div>
-          <label>Días</label>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
-            <label class="pill"><input type="checkbox" class="dow" value="MO" checked> &nbsp;Lun</label>
-            <label class="pill"><input type="checkbox" class="dow" value="TU" checked> &nbsp;Mar</label>
-            <label class="pill"><input type="checkbox" class="dow" value="WE" checked> &nbsp;Mié</label>
-            <label class="pill"><input type="checkbox" class="dow" value="TH" checked> &nbsp;Jue</label>
-            <label class="pill"><input type="checkbox" class="dow" value="FR" checked> &nbsp;Vie</label>
-          </div>
-        </div>
-        <div>
-          <label>Hora</label>
-          <input id="timeInput" type="time" value="16:00" />
-        </div>
-      </div>
-
-      <div class="row" style="margin-top:12px">
-        <div>
-          <label>Mensaje</label>
-          <input id="msgInput" type="text" placeholder="Ej: Martina y Roberto" value="Martina y Roberto" />
-        </div>
-        <div style="display:flex;gap:8px;align-items:end">
-          <button id="addBtn" class="btn">Agregar recordatorio</button>
-          <button id="clearBtn" class="btn-secondary">Limpiar todo</button>
-        </div>
-      </div>
-
-      <p class="hint">
-        Sugerencia del ejemplo: añade <span class="tag">Lun 16:00 — “Martina y Roberto”</span>,
-        <span class="tag">Mar 15:45 — “Martina”</span> y <span class="tag">Mar 16:00 — “Roberto”</span>.
-      </p>
-
-      <div class="list" id="list"></div>
-
-      <div class="row" style="margin-top:16px">
-        <div>
-          <button id="icsBtn" class="btn">Crear eventos en Calendario (.ics)</button>
-          <p class="hint">Abre el .ics y confirma. Quedan como eventos semanales de lunes a viernes con notificaciones del sistema.</p>
-        </div>
-        <div>
-          <button id="schedBtn" class="btn-secondary">Programar notificaciones locales (Android)</button>
-          <p id="schedInfo" class="hint tiny"></p>
-        </div>
-      </div>
-
-      <p id="permInfo" class="hint" style="margin-top:8px"></p>
+  <div class="wrap">
+    <div class="top">
+      <h1>Recordatorios — 2 por día (Lu–Vi)</h1>
+      <button id="installBtn" hidden>Instalar</button>
     </div>
 
-    <div class="card" style="margin-top:12px">
-      <strong>Cómo funciona (resumen corto)</strong>
-      <ul>
-        <li>El botón <span class="kbd">.ics</span> te crea eventos recurrentes fiables en el calendario del teléfono (iOS y Android).</li>
-        <li>El botón de notificaciones locales intenta usar una API nueva de Chrome Android; si no está disponible, te avisará.</li>
-        <li>Instálala con el botón “Instalar” arriba para usarla como app.</li>
-      </ul>
+    <p class="muted">Ejemplo: Lunes 16:00 “Martina y Roberto”; Martes 15:45 “Martina”; Martes 16:00 “Roberto”.</p>
+
+    <table>
+      <thead>
+        <tr class="muted">
+          <th>Día</th>
+          <th>Hora 1</th><th>Mensaje 1</th>
+          <th>Hora 2</th><th>Mensaje 2</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button id="icsBtn" class="btn">Crear eventos en Calendario (.ics)</button>
+      <span class="muted">Abre el .ics y confirma; crea eventos semanales con notificaciones del sistema.</span>
     </div>
+
+    <p class="muted" style="margin-top:10px">Consejo: Puedes dejar vacíos los campos que no uses.</p>
   </div>
 
-  <footer>Hecho con ❤️ · Funciona sin conexión</footer>
+<script>
+const DAYS = [
+  { code:"MO", label:"Lunes" },
+  { code:"TU", label:"Martes" },
+  { code:"WE", label:"Miércoles" },
+  { code:"TH", label:"Jueves" },
+  { code:"FR", label:"Viernes" },
+];
 
-  <script src="app.js"></script>
+const tbody = document.getElementById("tbody");
+DAYS.forEach(d=>{
+  const tr = document.createElement("tr"); tr.className="row";
+  tr.innerHTML = `
+    <td><strong>${d.label}</strong></td>
+    <td><input type="time" id="${d.code}_t1" /></td>
+    <td><input type="text" id="${d.code}_m1" placeholder="Ej: Martina" /></td>
+    <td><input type="time" id="${d.code}_t2" /></td>
+    <td><input type="text" id="${d.code}_m2" placeholder="Ej: Roberto" /></td>
+  `;
+  tbody.appendChild(tr);
+});
+
+// PWA install prompt
+let deferredPrompt=null;
+const installBtn=document.getElementById("installBtn");
+window.addEventListener("beforeinstallprompt",(e)=>{
+  e.preventDefault(); deferredPrompt=e; installBtn.hidden=false;
+});
+installBtn.addEventListener("click", async ()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt(); await deferredPrompt.userChoice;
+  installBtn.hidden=true;
+});
+
+// SW
+if("serviceWorker" in navigator){ navigator.serviceWorker.register("service-worker.js"); }
+
+document.getElementById("icsBtn").addEventListener("click", ()=>{
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  const now = new Date();
+  const dtstamp = toUTC(now);
+
+  let ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Recordatorios2PorDia//ES",
+    "CALSCALE:GREGORIAN",
+  ];
+
+  for(const d of DAYS){
+    // slot 1
+    addIfFilled(d.code, getVal(`${d.code}_t1`), getVal(`${d.code}_m1`));
+    // slot 2
+    addIfFilled(d.code, getVal(`${d.code}_t2`), getVal(`${d.code}_m2`));
+  }
+
+  function addIfFilled(dayCode, hhmm, msg){
+    if(!hhmm || !msg) return;
+    const next = nextOccurrence(dayCode, hhmm);
+    const uid = cryptoRand()+"@local";
+    ics.push(
+      "BEGIN:VEVENT",
+      `UID:${uid}`,
+      `DTSTAMP:${dtstamp}`,
+      `SUMMARY:${escapeICS(msg)}`,
+      `RRULE:FREQ=WEEKLY;BYDAY=${dayCode}`,
+      `DTSTART;TZID=${tz}:${toLocal(next)}`,
+      "DURATION:PT1M",
+      "END:VEVENT"
+    );
+  }
+
+  ics.push("END:VCALENDAR");
+  const blob = new Blob([ics.join("\r\n")], {type:"text/calendar;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href=url; a.download="recordatorios_lu_vi.ics";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 3000);
+
+  function getVal(id){ return (document.getElementById(id).value||"").trim(); }
+  function nextOccurrence(dayCode, hhmm){
+    const [H,M]=hhmm.split(":").map(n=>parseInt(n,10));
+    const now=new Date(); for(let i=0;i<14;i++){
+      const c=new Date(now); c.setDate(now.getDate()+i); c.setHours(H,M,0,0);
+      if(c>now && shortDay(c)===dayCode) return c;
+    }
+    const f=new Date(); f.setDate(f.getDate()+1); f.setHours(H,M,0,0); return f;
+  }
+  function shortDay(d){ return ["SU","MO","TU","WE","TH","FR","SA"][d.getDay()]; }
+  function toUTC(d){ return d.getUTCFullYear()+pad(d.getUTCMonth()+1)+pad(d.getUTCDate())+"T"+pad(d.getUTCHours())+pad(d.getUTCMinutes())+pad(d.getUTCSeconds())+"Z"; }
+  function toLocal(d){ return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+"T"+pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds()); }
+  function pad(n){ return String(n).padStart(2,"0"); }
+  function escapeICS(s){ return s.replace(/([,;])/g,"\\$1"); }
+  function cryptoRand(){ if(crypto?.getRandomValues){ const a=new Uint32Array(4); crypto.getRandomValues(a); return [...a].map(x=>x.toString(16)).join(""); } return Math.random().toString(16).slice(2); }
+});
+</script>
 </body>
 </html>
-
