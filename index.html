@@ -15,10 +15,9 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  // Coordenadas del radar (ejemplo Santiago)
+  // Coordenadas del radar
   const radarLat = -33.447868;
   const radarLng = -70.657196;
-
   const map = L.map('map').setView([radarLat, radarLng], 15);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -27,67 +26,61 @@
 
   // Ícono radar
   const radarIcon = L.icon({
-    iconUrl: 'radarIcon.png', // Ícono de radar
+    iconUrl: 'radarIcon.png',
     iconSize: [36, 36]
   });
 
-  // Radar marcador
   L.marker([radarLat, radarLng], { icon: radarIcon })
     .addTo(map)
     .bindPopup("📡 Radar Pasivo<br><small>Cuartel</small>");
 
-    // 🔰 CÍRCULO DE COBERTURA (1.2 km)
+  // Círculo general de cobertura
   L.circle([radarLat, radarLng], {
-    radius: 1200,             // 1.2 km
-    color: '#2ecc71',         // borde verde
-    fillColor: '#2ecc71',     // relleno verde
-    fillOpacity: 0.2          // bajo contraste
+    radius: 1200,
+    color: '#2ecc71',
+    fillColor: '#2ecc71',
+    fillOpacity: 0.2
   }).addTo(map).bindPopup("Radio de cobertura: 1.2 km");
 
-  // Coordenadas del radar (igual que las del marcador principal)
-const radarLatLng = L.latLng(-33.447868, -70.657196); // Reemplaza por tu coordenada exacta
-
-// Parámetros del haz
-const radioEnMetros = 1200; // 1.2 km
-const anguloCentral = 0; // 0° = norte
-const apertura = 10; // ángulo total del haz
-
-// Convertir grados a radianes
-function degToRad(deg) {
-  return deg * (Math.PI / 180);
-}
-
-// Función para calcular puntos del haz
-function generarHaz(latlng, angulo, apertura, radio) {
-  const puntos = [latlng];
-  const pasos = 20;
-  const inicio = angulo - apertura / 2;
-  const fin = angulo + apertura / 2;
-
-  for (let i = 0; i <= pasos; i++) {
-    const theta = degToRad(inicio + ((fin - inicio) * i) / pasos);
-    const dx = radio * Math.sin(theta);
-    const dy = -radio * Math.cos(theta); // Negativo porque Leaflet usa Y invertido
-    const destino = L.latLng(
-      latlng.lat + (180 / Math.PI) * (dy / 6378137),
-      latlng.lng + (180 / Math.PI) * (dx / 6378137) / Math.cos(latlng.lat * Math.PI / 180)
-    );
-    puntos.push(destino);
+  // Funciones auxiliares
+  function degToRad(deg) {
+    return deg * (Math.PI / 180);
   }
 
-  return puntos;
-}
+  function generarCono(latlng, angulo, apertura, radio) {
+    const puntos = [latlng];
+    const pasos = 30;
+    const inicio = angulo - apertura / 2;
+    const fin = angulo + apertura / 2;
 
-// Dibujar el haz como un polígono
-const hazPuntos = generarHaz(radarLatLng, anguloCentral, apertura, radioEnMetros);
-L.polygon(hazPuntos, {
-  color: "limegreen",
-  fillColor: "limegreen",
-  fillOpacity: 0.3,
-  weight: 1,
-  dashArray: "4"
-}).addTo(map);
+    for (let i = 0; i <= pasos; i++) {
+      const theta = degToRad(inicio + ((fin - inicio) * i) / pasos);
+      const dx = radio * Math.sin(theta);
+      const dy = -radio * Math.cos(theta);
+      const destino = L.latLng(
+        latlng.lat + (180 / Math.PI) * (dy / 6378137),
+        latlng.lng + (180 / Math.PI) * (dx / 6378137) / Math.cos(latlng.lat * Math.PI / 180)
+      );
+      puntos.push(destino);
+    }
 
+    return puntos;
+  }
+
+  // Dibujar 4 conos en rojo, cada uno en una dirección cardinal
+  const direcciones = [0, 90, 180, 270]; // Norte, Este, Sur, Oeste
+  const apertura = 54; // grados
+  const alcance = 1200; // metros
+
+  direcciones.forEach(direccion => {
+    const cono = generarCono(L.latLng(radarLat, radarLng), direccion, apertura, alcance);
+    L.polygon(cono, {
+      color: 'red',
+      fillColor: 'red',
+      fillOpacity: 0.25,
+      weight: 1
+    }).addTo(map);
+  });
 
   // Detección simulada
   const deteccion = {
@@ -99,9 +92,8 @@ L.polygon(hazPuntos, {
     hora: "12:43:01"
   };
 
-  // Ícono de dron
   const dronIcon = L.icon({
-    iconUrl: 'dronIcon.png', // Ícono dron
+    iconUrl: 'dronIcon.png',
     iconSize: [30, 30]
   });
 
@@ -115,7 +107,7 @@ L.polygon(hazPuntos, {
       Antena: ${deteccion.antena}
     `);
 
-  // Flecha de dirección
+  // Flecha dirección detección
   L.polyline([[radarLat, radarLng], [deteccion.lat, deteccion.lng]], {
     color: 'red',
     weight: 2,
