@@ -2,17 +2,69 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Radar Pasivo - Movimiento Errático</title>
+  <title>Radar Pasivo Detección Drones</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     html, body { margin: 0; padding: 0; }
     #map { height: 100vh; width: 100vw; }
+
+    #sidebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 1rem;
+      z-index: 999;
+      height: 100vh;
+      width: 250px;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+
+    #sidebar h2 {
+      font-size: 1.2rem;
+      margin-top: 0;
+    }
+
+    #sidebar ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    #sidebar ul li {
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #444;
+      padding-bottom: 0.5rem;
+    }
+
+    #toggleSidebar {
+      position: absolute;
+      top: 10px;
+      left: 260px;
+      z-index: 1000;
+      background: #005131;
+      color: white;
+      padding: 6px 12px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+
+    .hidden { transform: translateX(-260px); }
   </style>
 </head>
 <body>
 
 <div id="map"></div>
+<div id="sidebar">
+  <h2>📋 Drones Detectados</h2>
+  <ul id="droneList"></ul>
+</div>
+<button id="toggleSidebar">⏪ Ocultar</button>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -25,13 +77,22 @@
     attribution: 'Map data © OpenStreetMap contributors'
   }).addTo(map);
 
-  // Marcador de radar (círculo)
-  const radarMarker = L.circleMarker(radarLatLng, {
-    radius: 10,
-    color: 'blue',
-    fillColor: 'blue',
-    fillOpacity: 0.9
-  }).addTo(map).bindPopup("📡 Radar Pasivo<br><small>Ubicación fija</small>");
+  const radarIcon = L.icon({
+    iconUrl: 'radarIcon.png',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -10]
+  });
+
+  const dronIcon = L.icon({
+    iconUrl: 'dronIcon.png',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -10]
+  });
+
+  L.marker(radarLatLng, { icon: radarIcon }).addTo(map)
+    .bindPopup("📡 Radar Pasivo<br><small>Ubicación fija</small>").openPopup();
 
   // Círculo de cobertura
   L.circle(radarLatLng, {
@@ -39,9 +100,9 @@
     color: '#2ecc71',
     fillColor: '#2ecc71',
     fillOpacity: 0.2
-  }).addTo(map).bindPopup("Radio de cobertura: 1.2 km");
+  }).addTo(map).bindPopup("Cobertura 1,2 km");
 
-  // Funciones de geometría
+  // Utilidades
   function degToRad(deg) {
     return deg * (Math.PI / 180);
   }
@@ -91,30 +152,40 @@
 
   // Simulación de drones
   const drones = [
-    { lat: radarLat - 0.005, lng: radarLng - 0.005, velocidad: 0.0005 },
-    { lat: radarLat + 0.006, lng: radarLng - 0.004, velocidad: 0.0006 },
-    { lat: radarLat - 0.004, lng: radarLng + 0.006, velocidad: 0.0004 }
+    { lat: radarLat - 0.005, lng: radarLng - 0.005, vel: 0.0005, freq: "2.4 GHz" },
+    { lat: radarLat + 0.006, lng: radarLng - 0.004, vel: 0.0006, freq: "5.8 GHz" },
+    { lat: radarLat - 0.004, lng: radarLng + 0.006, vel: 0.0004, freq: "915 MHz" }
   ];
 
   const droneMarkers = [];
   const droneTrails = [];
 
   drones.forEach((d, i) => {
-    const marker = L.circleMarker([d.lat, d.lng], {
-      radius: 6,
-      color: 'black',
-      fillColor: 'black',
-      fillOpacity: 0.8
-    }).addTo(map).bindPopup(`🛸 Dron enemigo #${i + 1}`);
+    const marker = L.marker([d.lat, d.lng], { icon: dronIcon }).addTo(map)
+      .bindPopup(`🛸 Dron #${i + 1}`);
     const trail = L.polyline([[d.lat, d.lng]], { color: 'purple', weight: 2 }).addTo(map);
     droneMarkers.push(marker);
     droneTrails.push(trail);
   });
 
+  function actualizarSidebar() {
+    const list = document.getElementById("droneList");
+    list.innerHTML = "";
+    drones.forEach((d, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <strong>Dron #${i + 1}</strong><br>
+        Frecuencia: ${d.freq}<br>
+        Posición: ${d.lat.toFixed(6)}, ${d.lng.toFixed(6)}
+      `;
+      list.appendChild(li);
+    });
+  }
+
   setInterval(() => {
     drones.forEach((d, i) => {
-      const deltaLat = (Math.random() - 0.5) * d.velocidad;
-      const deltaLng = (Math.random() - 0.5) * d.velocidad;
+      const deltaLat = (Math.random() - 0.5) * d.vel;
+      const deltaLng = (Math.random() - 0.5) * d.vel;
       d.lat += deltaLat;
       d.lng += deltaLng;
 
@@ -126,15 +197,24 @@
 
       const nuevaPos = [d.lat, d.lng];
       droneMarkers[i].setLatLng(nuevaPos);
-      const trail = droneTrails[i];
-      trail.addLatLng(nuevaPos);
-
-      const maxPuntos = 100;
-      if (trail.getLatLngs().length > maxPuntos) {
-        trail.setLatLngs(trail.getLatLngs().slice(-maxPuntos));
+      droneTrails[i].addLatLng(nuevaPos);
+      if (droneTrails[i].getLatLngs().length > 100) {
+        droneTrails[i].setLatLngs(droneTrails[i].getLatLngs().slice(-100));
       }
     });
+
+    actualizarSidebar();
   }, 300);
+
+  // Mostrar/Ocultar barra lateral
+  const sidebar = document.getElementById("sidebar");
+  const toggleBtn = document.getElementById("toggleSidebar");
+  toggleBtn.addEventListener("click", () => {
+    sidebar.classList.toggle("hidden");
+    toggleBtn.innerText = sidebar.classList.contains("hidden") ? "⏩ Mostrar" : "⏪ Ocultar";
+  });
+
+  actualizarSidebar();
 </script>
 
 </body>
