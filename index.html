@@ -2,120 +2,106 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Radar Pasivo TP541 - 360° sin Torre Entel</title>
+  <title>Radar Pasivo TP541</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    body, html {
+    html, body, #map {
+      height: 100%;
       margin: 0;
-      padding: 0;
-      height: 100%;
-      font-family: sans-serif;
-    }
-    #map {
-      height: 100%;
-      margin-left: 250px;
-    }
-    .sidebar {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 250px;
-      height: 100%;
-      background-color: #1e1e1e;
-      color: white;
-      padding: 15px;
-      overflow-y: auto;
-      box-shadow: 2px 0 5px rgba(0,0,0,0.5);
-    }
-    .sidebar h2 {
-      font-size: 18px;
-      margin-bottom: 10px;
-    }
-    .sidebar select, .sidebar ul {
-      width: 100%;
-      margin-bottom: 15px;
-    }
-    .sidebar ul {
-      list-style: none;
-      padding: 0;
-    }
-    .sidebar li {
-      padding: 5px 0;
-      border-bottom: 1px solid #444;
     }
   </style>
 </head>
 <body>
-  <div class="sidebar">
-    <h2>📡 Radar OSINT</h2>
-    <label for="frecuencia">Filtrar por frecuencia:</label>
-    <select id="frecuencia">
-      <option value="all">Todas</option>
-      <option value="2.4GHz">2.4 GHz</option>
-      <option value="5.8GHz">5.8 GHz</option>
-    </select>
-    <h3>Drones detectados</h3>
-    <ul id="listaDrones">
-      <li>🛸 DJI Mini 2 – 2.4GHz – 19:43</li>
-      <li>🛸 FPV Racer – 5.8GHz – 19:40</li>
-    </ul>
-    <h3>Historial</h3>
-    <ul>
-      <li>📍 19:35 – Señal 5.8GHz débil</li>
-      <li>📍 19:32 – Señal 2.4GHz moderada</li>
-    </ul>
-  </div>
-
   <div id="map"></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <script>
     const radarLat = -33.447867318202256;
     const radarLng = -70.65718192524163;
+    const map = L.map('map').setView([radarLat, radarLng], 16);
 
-    const map = L.map('map').setView([radarLat, radarLng], 17);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors'
+      attribution: 'Radar Pasivo OSINT'
     }).addTo(map);
 
-    const antennaCones = [
+    // Ícono radar
+    const radarIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/1115/1115998.png',
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+
+    // Ícono dron
+    const droneIcon = L.icon({
+      iconUrl: 'https://cdn-icons-png.flaticon.com/512/201/201623.png',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+
+    // Marcador radar
+    L.marker([radarLat, radarLng], { icon: radarIcon }).addTo(map).bindPopup('📡 Radar Pasivo TP541');
+
+    // Círculo de cobertura
+    L.circle([radarLat, radarLng], {
+      radius: 1200,
+      color: 'green',
+      fillOpacity: 0.05
+    }).addTo(map).bindPopup('Cobertura 1.2 km');
+
+    // Conos de cobertura
+    const antennas = [
       { angle: 285, color: 'red' }, // O-NO
       { angle: 339, color: 'red' }, // Norte
       { angle: 93,  color: 'red' }, // Este
       { angle: 147, color: 'red' }  // SE
     ];
 
-    const antennaAperture = 54;
-
     function drawCone(lat, lng, angle, aperture, color) {
-      const points = [ [lat, lng] ];
-      const radius = 0.2; // 200 metros
+      const radius = 1.2; // km
+      const points = [[lat, lng]];
+      const steps = 30;
+      const start = angle - aperture / 2;
+      const end = angle + aperture / 2;
+      const delta = (end - start) / steps;
 
-      const segments = 30;
-      const startAngle = angle - aperture / 2;
-      const endAngle = angle + aperture / 2;
-      const angleStep = (endAngle - startAngle) / segments;
-
-      for (let i = 0; i <= segments; i++) {
-        const theta = (startAngle + i * angleStep) * Math.PI / 180;
-        const dx = radius * Math.cos(theta);
-        const dy = radius * Math.sin(theta);
-        const dest = L.latLng(lat + dy * 0.009, lng + dx * 0.009);
-        points.push(dest);
+      for (let i = 0; i <= steps; i++) {
+        const a = (start + i * delta) * Math.PI / 180;
+        const dx = radius * Math.cos(a) / 111.32;
+        const dy = radius * Math.sin(a) / 111.32;
+        points.push([lat + dy, lng + dx]);
       }
 
-      L.polygon(points, { color, fillOpacity: 0.25 }).addTo(map);
+      L.polygon(points, {
+        color,
+        fillColor: color,
+        fillOpacity: 0.25,
+        weight: 1
+      }).addTo(map);
     }
 
-    antennaCones.forEach(({ angle, color }) => {
-      drawCone(radarLat, radarLng, angle, antennaAperture, color);
+    antennas.forEach(({ angle, color }) => {
+      drawCone(radarLat, radarLng, angle, 54, color);
     });
 
-    L.marker([radarLat, radarLng]).addTo(map).bindPopup("📍 Radar OSINT").openPopup();
+    // ZONA CIEGA - hacia la Torre Entel (23° aprox)
+    drawCone(radarLat, radarLng, 23, 25, 'gray');
+
+    // Marcador dron móvil
+    let droneMarker = L.marker([radarLat, radarLng], { icon: droneIcon }).addTo(map).bindPopup('🛸 Dron patrullando');
+    let angle = 0;
+
+    setInterval(() => {
+      angle += 2;
+      const radiusKm = 0.6;
+      const latOffset = radiusKm * Math.cos(angle * Math.PI / 180) / 111.32;
+      const lngOffset = radiusKm * Math.sin(angle * Math.PI / 180) / (111.32 * Math.cos(radarLat * Math.PI / 180));
+      const newLat = radarLat + latOffset;
+      const newLng = radarLng + lngOffset;
+      droneMarker.setLatLng([newLat, newLng]);
+    }, 250);
+
   </script>
 </body>
 </html>
