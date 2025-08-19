@@ -2,224 +2,201 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Radar Pasivo - Detección de Drones</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radar Pasivo - Simulación</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', sans-serif;
-    }
-    #map { height: 100vh; width: 100%; }
-
+    html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
+    #map { height: 100%; width: 100%; }
     #sidebar {
-      width: 300px;
-      height: 100vh;
-      background: #e0f0e8;
-      overflow-y: auto;
-      padding: 10px;
+      position: absolute; top: 0; left: 0; width: 270px; height: 100%;
+      background: #e9f5ed; z-index: 999;
       box-shadow: 2px 0 5px rgba(0,0,0,0.2);
-      position: fixed;
-      left: 0;
-      top: 0;
-      z-index: 1000;
+      overflow-y: auto; padding: 10px;
       transition: transform 0.3s ease;
     }
-    #sidebar.hidden {
-      transform: translateX(-100%);
+    #sidebar.hidden { transform: translateX(-100%); }
+    .deteccion {
+      background: #fff; border-left: 4px solid #005131;
+      margin-bottom: 10px; padding: 10px; font-size: 14px;
     }
     #toggleSidebar {
-      position: fixed;
-      top: 10px;
-      left: 310px;
-      z-index: 1100;
-      background: #2d5f3b;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      cursor: pointer;
-      border-radius: 4px;
+      position: absolute; top: 10px; left: 280px;
+      background: #005131; color: #fff; border: none;
+      padding: 5px 10px; z-index: 1000; cursor: pointer;
     }
-
-    .deteccion {
-      background: #fff;
-      border-left: 4px solid #2c3e50;
-      padding: 8px;
-      margin-bottom: 10px;
-      font-size: 14px;
+    #alerta {
+      position: absolute; top: 20px; right: 20px;
+      background: red; color: white; font-weight: bold;
+      padding: 10px 20px; font-size: 18px;
+      animation: blink 1s infinite;
+      z-index: 1000; display: none;
     }
-
-    .alerta {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: red;
-      color: white;
-      padding: 12px 20px;
-      font-size: 20px;
-      font-weight: bold;
-      z-index: 2000;
-      animation: parpadeo 1s infinite;
-      border-radius: 8px;
-      box-shadow: 0 0 8px rgba(0,0,0,0.4);
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0; }
     }
-
-    @keyframes parpadeo {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
-    }
-
     .leaflet-control-layers {
-      margin-top: 70px !important;
+      z-index: 999 !important;
     }
   </style>
 </head>
 <body>
 
 <div id="sidebar">
-  <h3>📋 Detecciones</h3>
-  <div id="listaDetecciones"></div>
+  <h3>📋 Drones Detectados</h3>
+  <div id="detecciones"></div>
 </div>
-<button id="toggleSidebar">Ocultar barra</button>
-
+<button id="toggleSidebar">⏪ Ocultar</button>
+<div id="alerta">🚨 DRON DETECTADO 🚨</div>
 <div id="map"></div>
-<div id="alerta" class="alerta" style="display:none;">DRON DETECTADO</div>
+<audio id="alarma" src="alert.mp3" preload="auto"></audio>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  const radarLatLng = L.latLng(-33.447867318202256, -70.65718192524163);
+  const radarLatLng = [-33.447867318202256, -70.65718192524163];
   const torreEntel = [-33.44462269903805, -70.65603368514269];
-  const map = L.map('map').setView(radarLatLng, 15);
+  const apertura = 54, radio = 1200;
 
-  // Capas de mapa
-  const capa1 = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
-  const capa2 = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
+  const map = L.map('map', {
+    center: radarLatLng, zoom: 16,
+    layers: [L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')]
+  });
 
-  capa1.addTo(map);
-  L.control.layers({ "OpenStreetMap": capa1, "TopoMap": capa2 }).addTo(map);
+  const baseMaps = {
+    "Mapa Calle": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
+    "Satélite": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' +
+      'World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' })
+  };
+  L.control.layers(baseMaps).addTo(map);
 
-  // Iconos
   const radarIcon = L.icon({ iconUrl: 'radarIcon.png', iconSize: [36, 36] });
-  const dronIcon = L.icon({ iconUrl: 'dronIcon.png', iconSize: [30, 30] });
+  const dronIcon = L.icon({ iconUrl: 'dronIcon.png', iconSize: [28, 28] });
 
-  // Radar
-  L.marker(radarLatLng, { icon: radarIcon }).addTo(map).bindPopup("📡 Radar Pasivo");
-  L.circle(radarLatLng, { radius: 1200, color: '#2ecc71', fillColor: '#2ecc71', fillOpacity: 0.2 }).addTo(map);
+  L.marker(radarLatLng, { icon: radarIcon }).addTo(map)
+    .bindPopup("📡 Radar Pasivo<br><small>Ubicación del radar</small>");
 
-  // Conos (excepto hacia Torre Entel)
-  const aperturaTP541 = 54;
-  const radioTP541 = 1200;
-  const angulos = [30, 120, 210, 300]; // Evitando Torre Entel
+  L.circle(radarLatLng, {
+    radius: 1200, color: '#2ecc71', fillColor: '#2ecc71', fillOpacity: 0.15
+  }).addTo(map);
 
-  function degToRad(deg) {
-    return deg * (Math.PI / 180);
-  }
+  // Cálculo dirección Torre Entel y ajuste de antenas
+  const getAzimut = (from, to) => {
+    const rad = Math.atan2(to[1] - from[1], to[0] - from[0]);
+    return ((rad * 180 / Math.PI + 360) % 360);
+  };
 
-  function generarHaz(latlng, angulo, apertura, radio) {
-    const puntos = [latlng];
-    const pasos = 20;
-    const inicio = angulo - apertura / 2;
-    const fin = angulo + apertura / 2;
-
-    for (let i = 0; i <= pasos; i++) {
-      const theta = degToRad(inicio + ((fin - inicio) * i) / pasos);
-      const dx = radio * Math.sin(theta);
-      const dy = -radio * Math.cos(theta);
-      const destino = L.latLng(
-        latlng.lat + (180 / Math.PI) * (dy / 6378137),
-        latlng.lng + (180 / Math.PI) * (dx / 6378137) / Math.cos(latlng.lat * Math.PI / 180)
-      );
-      puntos.push(destino);
-    }
-
-    return puntos;
-  }
-
-  angulos.forEach((angulo) => {
-    const haz = generarHaz(radarLatLng, angulo, aperturaTP541, radioTP541);
-    L.polygon(haz, {
-      color: "red",
-      fillColor: "red",
-      fillOpacity: 0.2,
-      weight: 1,
-      dashArray: "4"
-    }).addTo(map);
-  });
-
-  // Zona ciega hacia torre Entel (entre 330° y 30°)
-  const zonaCiega = generarHaz(radarLatLng, 0, 60, 1200);
-  L.polygon(zonaCiega, {
-    color: "gray",
-    fillColor: "gray",
-    fillOpacity: 0.15,
-    weight: 1
-  }).addTo(map).bindPopup("Zona ciega hacia Torre Entel");
-
-  // Sidebar y alerta
-  const alerta = document.getElementById("alerta");
-  const listaDiv = document.getElementById("listaDetecciones");
-  const toggleSidebar = document.getElementById("toggleSidebar");
-  const sidebar = document.getElementById("sidebar");
-
-  toggleSidebar.addEventListener("click", () => {
-    sidebar.classList.toggle("hidden");
-    toggleSidebar.innerText = sidebar.classList.contains("hidden") ? "Mostrar barra" : "Ocultar barra";
-  });
-
-  // Drones en movimiento
-  const drones = [
-    { nombre: "Dron 1", lat: radarLatLng.lat, lng: radarLatLng.lng, marker: null, ruta: "erratica", coordenadas: [] },
-    { nombre: "Dron 2", lat: radarLatLng.lat + 0.002, lng: radarLatLng.lng - 0.002, marker: null, ruta: "erratica", coordenadas: [] },
-    { nombre: "Dron 3", lat: radarLatLng.lat + 0.012, lng: radarLatLng.lng + 0.005, marker: null, ruta: "recta", coordenadas: [] }
+  const torreAzimut = getAzimut(radarLatLng, torreEntel);
+  const angulos = [
+    torreAzimut + 120,
+    torreAzimut + 210,
+    torreAzimut + 300,
+    torreAzimut + 30
   ];
 
-  drones.forEach((dron, i) => {
-    const m = L.marker([dron.lat, dron.lng], { icon: dronIcon })
-      .addTo(map)
-      .bindPopup(`🛸 <b>${dron.nombre}</b><br>Simulación de dron enemigo`);
-    dron.marker = m;
+  function degToRad(d) { return d * (Math.PI / 180); }
 
-    const div = document.createElement("div");
-    div.className = "deteccion";
-    div.id = `info${i}`;
-    listaDiv.appendChild(div);
-  });
-
-  function moverDrones() {
-    drones.forEach((dron, i) => {
-      if (dron.ruta === "erratica") {
-        dron.lat += (Math.random() - 0.5) * 0.0003;
-        dron.lng += (Math.random() - 0.5) * 0.0003;
-      } else {
-        if (dron.lat > radarLatLng.lat - 0.012) {
-          dron.lat -= 0.0004;
-          dron.lng -= 0.0001;
-        }
-      }
-
-      dron.coordenadas.push([dron.lat, dron.lng]);
-      if (dron.coordenadas.length > 1) {
-        L.polyline(dron.coordenadas.slice(-2), { color: 'black', weight: 1 }).addTo(map);
-      }
-
-      dron.marker.setLatLng([dron.lat, dron.lng]);
-      dron.marker.setPopupContent(`🛸 <b>${dron.nombre}</b><br>Lat: ${dron.lat.toFixed(6)}<br>Lng: ${dron.lng.toFixed(6)}`);
-
-      // Actualiza lista
-      const info = document.getElementById(`info${i}`);
-      info.innerHTML = `<span>${dron.nombre}</span>Lat: ${dron.lat.toFixed(6)}<br>Lng: ${dron.lng.toFixed(6)}`;
-
-      // Alarma visual si entra al radio
-      const distancia = map.distance(radarLatLng, [dron.lat, dron.lng]);
-      if (distancia < 1200) {
-        alerta.style.display = 'block';
-      }
-    });
+  function generarHaz(center, angle, apertura, distancia) {
+    const puntos = [center];
+    const pasos = 10;
+    for (let i = 0; i <= pasos; i++) {
+      const a = degToRad(angle - apertura/2 + (apertura * i / pasos));
+      const dx = distancia * Math.sin(a);
+      const dy = -distancia * Math.cos(a);
+      const lat = center[0] + (180/Math.PI) * (dy/6378137);
+      const lng = center[1] + (180/Math.PI) * (dx/6378137) / Math.cos(center[0] * Math.PI/180);
+      puntos.push([lat, lng]);
+    }
+    return L.polygon(puntos, {
+      color: 'red', fillColor: 'red', fillOpacity: 0.15, dashArray: '5,5'
+    }).addTo(map);
   }
 
-  setInterval(moverDrones, 1000);
-</script>
+  angulos.forEach(a => generarHaz(radarLatLng, a, apertura, radio));
 
+  // Sidebar Toggle
+  const sidebar = document.getElementById("sidebar");
+  const toggleBtn = document.getElementById("toggleSidebar");
+  toggleBtn.onclick = () => {
+    sidebar.classList.toggle("hidden");
+    toggleBtn.innerText = sidebar.classList.contains("hidden") ? "⏩ Mostrar" : "⏪ Ocultar";
+  };
+
+  // Alerta
+  const alerta = document.getElementById("alerta");
+  const alarma = document.getElementById("alarma");
+
+  // Detección de drones
+  const deteccionesDiv = document.getElementById("detecciones");
+
+  function crearDiv(id, coord) {
+    const div = document.createElement("div");
+    div.id = "dron-" + id;
+    div.className = "deteccion";
+    div.innerHTML = `<strong>🛸 Dron ${id}</strong><br>Lat: ${coord[0].toFixed(6)}<br>Lng: ${coord[1].toFixed(6)}`;
+    return div;
+  }
+
+  function actualizarDiv(id, coord) {
+    const el = document.getElementById("dron-" + id);
+    if (el) {
+      el.innerHTML = `<strong>🛸 Dron ${id}</strong><br>Lat: ${coord[0].toFixed(6)}<br>Lng: ${coord[1].toFixed(6)}`;
+    }
+  }
+
+  function dentroDelRadio(pos) {
+    return map.distance(radarLatLng, pos) <= 1200;
+  }
+
+  function crearDron(id, tipo) {
+    let pos = tipo === "recto"
+      ? [radarLatLng[0] + 0.01, radarLatLng[1]]
+      : [radarLatLng[0] + (Math.random() - 0.5) * 0.01, radarLatLng[1] + (Math.random() - 0.5) * 0.01];
+
+    const marker = L.marker(pos, { icon: dronIcon }).addTo(map)
+      .bindPopup(`🛸 <b>Dron ${id}</b><br>Ruta: ${tipo}`);
+
+    const path = L.polyline([pos], { color: "blue", weight: 2 }).addTo(map);
+    deteccionesDiv.appendChild(crearDiv(id, pos));
+
+    let counter = 0;
+    let direction = tipo === "recto" ? [-0.0003, 0] : [0, 0];
+
+    const move = () => {
+      if (tipo === "recto") {
+        pos[0] += direction[0];
+      } else {
+        pos[0] += (Math.random() - 0.5) * 0.0004;
+        pos[1] += (Math.random() - 0.5) * 0.0004;
+      }
+
+      marker.setLatLng(pos);
+      path.addLatLng(pos);
+      actualizarDiv(id, pos);
+
+      if (dentroDelRadio(pos)) {
+        if (id === 3) {
+          alerta.style.display = "block";
+          alarma.play();
+        }
+      } else {
+        if (id === 3) alerta.style.display = "none";
+        map.removeLayer(marker);
+        map.removeLayer(path);
+        const old = document.getElementById("dron-" + id);
+        if (old) old.remove();
+        setTimeout(() => crearDron(id, tipo), 5000);
+        return;
+      }
+      requestAnimationFrame(move);
+    };
+
+    requestAnimationFrame(move);
+  }
+
+  crearDron(1, "erratico");
+  crearDron(2, "erratico");
+  crearDron(3, "recto");
+</script>
 </body>
 </html>
