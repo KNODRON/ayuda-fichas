@@ -160,14 +160,14 @@
     deteccionesDiv.appendChild(crearDiv(id, pos));
 
     let counter = 0;
-    let direction = tipo === "recto" ? [-0.0003, 0] : [0, 0];
+    let direction = tipo === "recto" ? [-0.0001, 0] : [0, 0];
 
     const move = () => {
       if (tipo === "recto") {
-        pos[0] += direction[0] * 0.1;
+        pos[0] += direction[0] * 0.001;
       } else {
-        pos[0] += (Math.random() - 0.5) * 0.000005;
-        pos[1] += (Math.random() - 0.5) * 0.000005;
+        pos[0] += (Math.random() - 0.05) * 0.0000002;
+        pos[1] += (Math.random() - 0.05) * 0.0000002;
       }
 
       marker.setLatLng(pos);
