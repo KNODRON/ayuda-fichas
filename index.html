@@ -164,9 +164,9 @@
 
     const move = () => {
       if (tipo === "recto") {
-        pos[0] += direction[0] * 0.01;
+        pos[0] += direction[0] * 0.5;
       } else {
-        pos[0] += (Math.random() - 0.10) * 0.00002;
+        pos[0] += (Math.random() - 0.32) * 0.00005;
         pos[1] += (Math.random() - 0.10) * 0.00002;
       }
 
