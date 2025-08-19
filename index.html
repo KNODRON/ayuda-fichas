@@ -9,23 +9,50 @@
   <style>
     html, body, #map { height: 100%; margin: 0; }
 
-    #sidebar {
+    #sidebarToggle {
       position: absolute;
-      top: 60px; left: 10px;
+      top: 10px;
+      left: 10px;
       background: #005131;
       color: white;
-      padding: 15px;
-      border-radius: 8px;
-      max-width: 260px;
-      font-family: Arial, sans-serif;
-      box-shadow: 2px 2px 10px rgba(0,0,0,0.4);
-      z-index: 1000;
+      border: none;
+      padding: 8px 12px;
+      font-size: 20px;
+      cursor: pointer;
+      z-index: 1100;
+      border-radius: 4px;
     }
 
-    #sidebar h3 {
-      margin-top: 0;
-      border-bottom: 2px solid white;
-      padding-bottom: 5px;
+    #sidebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 280px;
+      background-color: #ffffff;
+      color: #005131;
+      border-right: 3px solid #005131;
+      padding: 15px;
+      font-family: Arial, sans-serif;
+      z-index: 1000;
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+
+    #sidebar.hidden {
+      transform: translateX(-300px);
+    }
+
+    .drone-box {
+      border: 1px solid #005131;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      background: #f3fdf3;
+    }
+
+    .drone-box strong {
+      color: #003d26;
     }
 
     .alerta {
@@ -34,50 +61,31 @@
       background: red;
       color: white;
       font-weight: bold;
-      padding: 12px 24px;
-      font-size: 22px;
+      padding: 10px 20px;
+      font-size: 20px;
       border-radius: 10px;
       animation: parpadeo 1s infinite;
       z-index: 1000;
     }
 
     @keyframes parpadeo {
-      0%, 100% { opacity: 1; }
+      0% { opacity: 1; }
       50% { opacity: 0; }
-    }
-
-    #toggleSidebarBtn {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background-color: #005131;
-      color: white;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-      z-index: 1100;
-      box-shadow: 1px 1px 5px rgba(0,0,0,0.3);
-    }
-
-    #toggleSidebarBtn:hover {
-      background-color: #00713c;
+      100% { opacity: 1; }
     }
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <button id="toggleSidebarBtn">Mostrar/Ocultar Info</button>
+  <button id="sidebarToggle">☰</button>
   <div id="sidebar">
-    <h3>Drones Detectados</h3>
-    <ul id="droneList"></ul>
+    <h2>Radar de Drones</h2>
+    <div id="droneList"></div>
   </div>
   <audio id="alertaAudio" src="https://www.soundjay.com/button/beep-07.wav"></audio>
 
   <script>
     const radarCoords = [-33.447867318202256, -70.65718192524163];
-    const torreEntel = [-33.44462269903805, -70.65603368514269];
 
     const map = L.map('map').setView(radarCoords, 16);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -87,7 +95,9 @@
     const radarIcon = L.icon({ iconUrl: 'radarIcon.png', iconSize: [40, 40] });
     const droneIcon = L.icon({ iconUrl: 'dronIcon.png', iconSize: [30, 30] });
 
-    L.marker(radarCoords, { icon: radarIcon }).addTo(map);
+    const radarMarker = L.marker(radarCoords, { icon: radarIcon }).addTo(map);
+    radarMarker.bindPopup(`<b>Radar Central</b><br>Ubicación:<br>${radarCoords[0].toFixed(6)}, ${radarCoords[1].toFixed(6)}<br>Rango: 1.2 km`);
+
     const cobertura = L.circle(radarCoords, {
       radius: 1200,
       color: '#00ff00',
@@ -115,9 +125,9 @@
     addCone(radarCoords, 210, 'red');
 
     const drones = [
-      { id: 1, freq: '2.4 GHz', coords: [-33.448541, -70.649430], path: [[-33.448541, -70.649430], [-33.4465, -70.6530]], speed: 0.006 },
-      { id: 2, freq: '5.8 GHz', coords: [-33.449819, -70.654906], path: [[-33.4508, -70.6600], [-33.4468, -70.6535], [-33.442, -70.645]], speed: 0.004 },
-      { id: 3, freq: '915 MHz', coords: [-33.452796, -70.651972], path: [[-33.455, -70.654], [-33.451, -70.652], [-33.4475, -70.650]], speed: 0.002 }
+      { id: 1, freq: '2.4 GHz', coords: [-33.448541, -70.649430], path: [[-33.448541, -70.649430], [-33.4465, -70.6530]] },
+      { id: 2, freq: '5.8 GHz', coords: [-33.449819, -70.654906], path: [[-33.4508, -70.6600], [-33.4468, -70.6535], [-33.442, -70.645]] },
+      { id: 3, freq: '915 MHz', coords: [-33.452796, -70.651972], path: [[-33.455, -70.654], [-33.451, -70.652], [-33.4475, -70.650]] }
     ];
 
     const droneList = document.getElementById('droneList');
@@ -125,12 +135,14 @@
     let alertShown = false;
 
     drones.forEach(d => {
-      const li = document.createElement('li');
-      li.innerHTML = `<strong>Dron #${d.id}</strong><br>Frecuencia: ${d.freq}<br>Posición: ${d.coords[0].toFixed(6)}, ${d.coords[1].toFixed(6)}`;
-      li.id = `drone-${d.id}`;
-      droneList.appendChild(li);
+      const div = document.createElement('div');
+      div.className = 'drone-box';
+      div.innerHTML = `<strong>Dron #${d.id}</strong><br>Frecuencia: ${d.freq}<br>Posición: ${d.coords[0].toFixed(6)}, ${d.coords[1].toFixed(6)}`;
+      div.id = `drone-${d.id}`;
+      droneList.appendChild(div);
 
       const marker = L.marker(d.coords, { icon: droneIcon }).addTo(map);
+      marker.bindPopup(`<b>Dron #${d.id}</b><br>Frecuencia: ${d.freq}`);
       d.marker = marker;
       d.index = 0;
       d.trail = L.polyline([d.coords], { color: 'purple' }).addTo(map);
@@ -141,8 +153,8 @@
         if (d.index < d.path.length) {
           const target = d.path[d.index];
           const current = d.marker.getLatLng();
-          const lat = current.lat + (target[0] - current.lat) * d.speed;
-          const lng = current.lng + (target[1] - current.lng) * d.speed;
+          const lat = current.lat + (target[0] - current.lat) * 0.01;
+          const lng = current.lng + (target[1] - current.lng) * 0.01;
 
           d.marker.setLatLng([lat, lng]);
           d.trail.addLatLng([lat, lng]);
@@ -157,17 +169,11 @@
             alerta.innerText = 'DRON DETECTADO';
             document.body.appendChild(alerta);
             alertShown = true;
-            setTimeout(() => {
-              alerta.remove();
-              alertShown = false;
-            }, 5000);
+            setTimeout(() => alerta.remove(), 5000);
           }
 
           if (Math.abs(lat - target[0]) < 0.0002 && Math.abs(lng - target[1]) < 0.0002) {
             d.index++;
-            if (d.index >= d.path.length) {
-              d.index = 0;
-            }
           }
         }
       });
@@ -175,14 +181,11 @@
 
     setInterval(updateDrones, 200);
 
-    // Mostrar/Ocultar barra lateral
-    const toggleBtn = document.getElementById("toggleSidebarBtn");
+    // Botón hamburguesa para mostrar/ocultar barra
+    const toggleButton = document.getElementById("sidebarToggle");
     const sidebar = document.getElementById("sidebar");
-    let visible = true;
-
-    toggleBtn.addEventListener("click", () => {
-      visible = !visible;
-      sidebar.style.display = visible ? "block" : "none";
+    toggleButton.addEventListener("click", () => {
+      sidebar.classList.toggle("hidden");
     });
   </script>
 </body>
