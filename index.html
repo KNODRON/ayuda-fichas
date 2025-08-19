@@ -9,50 +9,46 @@
   <style>
     html, body, #map { height: 100%; margin: 0; }
 
-    #sidebarToggle {
+    #sidebar {
       position: absolute;
-      top: 10px;
-      left: 10px;
-      background: #005131;
+      top: 0; left: 0;
+      width: 260px;
+      height: 100%;
+      background-color: #0b3d2c;
       color: white;
-      border: none;
-      padding: 8px 12px;
+      padding: 15px;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+      transition: transform 0.3s ease-in-out;
+      z-index: 1000;
+    }
+
+    #sidebar h2 {
+      margin-top: 40px;
+      font-size: 20px;
+      color: white;
+    }
+
+    #droneList li {
+      background: #ffffff;
+      color: #0b3d2c;
+      margin: 10px 0;
+      padding: 10px;
+      border-left: 5px solid #6FAF5B;
+      border-radius: 8px;
+      list-style: none;
+    }
+
+    #hamburguesa {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: #0b3d2c;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
       font-size: 20px;
       cursor: pointer;
       z-index: 1100;
-      border-radius: 4px;
-    }
-
-    #sidebar {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
-      width: 280px;
-      background-color: #ffffff;
-      color: #005131;
-      border-right: 3px solid #005131;
-      padding: 15px;
-      font-family: Arial, sans-serif;
-      z-index: 1000;
-      overflow-y: auto;
-      transition: transform 0.3s ease;
-    }
-
-    #sidebar.hidden {
-      transform: translateX(-300px);
-    }
-
-    .drone-box {
-      border: 1px solid #005131;
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
-      background: #f3fdf3;
-    }
-
-    .drone-box strong {
-      color: #003d26;
     }
 
     .alerta {
@@ -69,20 +65,21 @@
     }
 
     @keyframes parpadeo {
-      0% { opacity: 1; }
+      0%, 100% { opacity: 1; }
       50% { opacity: 0; }
-      100% { opacity: 1; }
     }
+
+    .hidden { transform: translateX(-100%); }
   </style>
 </head>
 <body>
-  <div id="map"></div>
-  <button id="sidebarToggle">☰</button>
+  <div id="hamburguesa">☰</div>
   <div id="sidebar">
     <h2>Radar de Drones</h2>
-    <div id="droneList"></div>
+    <ul id="droneList"></ul>
   </div>
-  <audio id="alertaAudio" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+  <div id="map"></div>
+  <audio id="alertaAudio" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
 
   <script>
     const radarCoords = [-33.447867318202256, -70.65718192524163];
@@ -96,7 +93,7 @@
     const droneIcon = L.icon({ iconUrl: 'dronIcon.png', iconSize: [30, 30] });
 
     const radarMarker = L.marker(radarCoords, { icon: radarIcon }).addTo(map);
-    radarMarker.bindPopup(`<b>Radar Central</b><br>Ubicación:<br>${radarCoords[0].toFixed(6)}, ${radarCoords[1].toFixed(6)}<br>Rango: 1.2 km`);
+    radarMarker.bindPopup(`<strong>Radar Central</strong><br>Ubicación:<br>${radarCoords[0].toFixed(6)}, ${radarCoords[1].toFixed(6)}`);
 
     const cobertura = L.circle(radarCoords, {
       radius: 1200,
@@ -132,60 +129,62 @@
 
     const droneList = document.getElementById('droneList');
     const alertaAudio = document.getElementById('alertaAudio');
-    let alertShown = false;
+    let alertaMostrada = false;
+    let alertaDiv = null;
 
     drones.forEach(d => {
-      const div = document.createElement('div');
-      div.className = 'drone-box';
-      div.innerHTML = `<strong>Dron #${d.id}</strong><br>Frecuencia: ${d.freq}<br>Posición: ${d.coords[0].toFixed(6)}, ${d.coords[1].toFixed(6)}`;
-      div.id = `drone-${d.id}`;
-      droneList.appendChild(div);
+      const li = document.createElement('li');
+      li.innerHTML = `<strong>Dron #${d.id}</strong><br>Frecuencia: ${d.freq}<br>Posición: ${d.coords[0].toFixed(6)}, ${d.coords[1].toFixed(6)}`;
+      li.id = `drone-${d.id}`;
+      droneList.appendChild(li);
 
       const marker = L.marker(d.coords, { icon: droneIcon }).addTo(map);
-      marker.bindPopup(`<b>Dron #${d.id}</b><br>Frecuencia: ${d.freq}`);
+      marker.bindPopup(`<strong>Dron #${d.id}</strong><br>Frecuencia: ${d.freq}`);
       d.marker = marker;
       d.index = 0;
       d.trail = L.polyline([d.coords], { color: 'purple' }).addTo(map);
     });
 
     function updateDrones() {
+      let dronDentro = false;
+
       drones.forEach(d => {
         if (d.index < d.path.length) {
           const target = d.path[d.index];
           const current = d.marker.getLatLng();
-          const lat = current.lat + (target[0] - current.lat) * 0.01;
-          const lng = current.lng + (target[1] - current.lng) * 0.01;
+          const lat = current.lat + (target[0] - current.lat) * 0.02;
+          const lng = current.lng + (target[1] - current.lng) * 0.02;
 
           d.marker.setLatLng([lat, lng]);
           d.trail.addLatLng([lat, lng]);
-          document.getElementById(`drone-${d.id}`).innerHTML =
-            `<strong>Dron #${d.id}</strong><br>Frecuencia: ${d.freq}<br>Posición: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+          document.getElementById(`drone-${d.id}`).innerHTML = `<strong>Dron #${d.id}</strong><br>Frecuencia: ${d.freq}<br>Posición: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
 
           const dist = map.distance([lat, lng], radarCoords);
-          if (d.id === 2 && dist < 1200 && !alertShown) {
-            alertaAudio.play();
-            const alerta = document.createElement('div');
-            alerta.className = 'alerta';
-            alerta.innerText = 'DRON DETECTADO';
-            document.body.appendChild(alerta);
-            alertShown = true;
-            setTimeout(() => alerta.remove(), 5000);
-          }
+          if (d.id === 2 && dist < 1200) dronDentro = true;
 
           if (Math.abs(lat - target[0]) < 0.0002 && Math.abs(lng - target[1]) < 0.0002) {
             d.index++;
           }
         }
       });
+
+      if (dronDentro && !alertaMostrada) {
+        alertaAudio.play();
+        alertaDiv = document.createElement('div');
+        alertaDiv.className = 'alerta';
+        alertaDiv.innerText = 'DRON DETECTADO';
+        document.body.appendChild(alertaDiv);
+        alertaMostrada = true;
+      } else if (!dronDentro && alertaMostrada) {
+        alertaDiv.remove();
+        alertaMostrada = false;
+      }
     }
 
     setInterval(updateDrones, 200);
 
-    // Botón hamburguesa para mostrar/ocultar barra
-    const toggleButton = document.getElementById("sidebarToggle");
-    const sidebar = document.getElementById("sidebar");
-    toggleButton.addEventListener("click", () => {
-      sidebar.classList.toggle("hidden");
+    document.getElementById('hamburguesa').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('hidden');
     });
   </script>
 </body>
