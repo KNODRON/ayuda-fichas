@@ -1,13 +1,23 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <title>Radar Pasivo - Detección de Drones</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <style>
-    #map { height: 100vh; }
-  </style>
+    <title>Radar Pasivo - Detección de Drones</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        /* Estilo para que el mapa ocupe toda la pantalla */
+        #map { 
+            height: 100vh;
+            width: 100vw;
+        }
+        /* Estilos básicos para el cuerpo y asegurar que no haya márgenes no deseados */
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Evita barras de desplazamiento */
+        }
+    </style>
 </head>
 <body>
 
@@ -15,104 +25,124 @@
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-  // Coordenadas del radar
-  const radarLat = -33.447868;
-  const radarLng = -70.657196;
-  const map = L.map('map').setView([radarLat, radarLng], 15);
+    // Configuración inicial del mapa
+    const radarLat = -33.447868;
+    const radarLng = -70.657196;
+    const map = L.map('map').setView([radarLat, radarLng], 15);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
+    // Añadir la capa de OpenStreetMap al mapa
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
 
-  // Ícono radar
-  const radarIcon = L.icon({
-    iconUrl: 'radarIcon.png',
-    iconSize: [36, 36]
-  });
+    // Definición de íconos para el radar y el dron
+    // Se usan URLs de placeholders para asegurar que las imágenes se visualicen.
+    const radarIcon = L.icon({
+        iconUrl: 'https://placehold.co/36x36/2c5282/ffffff?text=📡',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18], // Centrar el ícono en el punto de coordenadas
+        popupAnchor: [0, -18]
+    });
 
-  L.marker([radarLat, radarLng], { icon: radarIcon })
-    .addTo(map)
-    .bindPopup("📡 Radar Pasivo<br><small>Cuartel</small>");
+    const dronIcon = L.icon({
+        iconUrl: 'https://placehold.co/30x30/e53e3e/ffffff?text=🛸',
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -15]
+    });
 
-  // Círculo general de cobertura
-  L.circle([radarLat, radarLng], {
-    radius: 1200,
-    color: '#2ecc71',
-    fillColor: '#2ecc71',
-    fillOpacity: 0.2
-  }).addTo(map).bindPopup("Radio de cobertura: 1.2 km");
+    // Colocar el marcador del radar en el mapa
+    L.marker([radarLat, radarLng], { icon: radarIcon })
+        .addTo(map)
+        .bindPopup("📡 Radar Pasivo<br><small>Cuartel</small>");
 
-  // Funciones auxiliares
-  function degToRad(deg) {
-    return deg * (Math.PI / 180);
-  }
+    // Círculo de cobertura general del radar
+    L.circle([radarLat, radarLng], {
+        radius: 1200, // Radio en metros
+        color: '#2ecc71',
+        fillColor: '#2ecc71',
+        fillOpacity: 0.2
+    }).addTo(map).bindPopup("Radio de cobertura: 1.2 km");
 
-  function generarCono(latlng, angulo, apertura, radio) {
-    const puntos = [latlng];
-    const pasos = 30;
-    const inicio = angulo - apertura / 2;
-    const fin = angulo + apertura / 2;
-
-    for (let i = 0; i <= pasos; i++) {
-      const theta = degToRad(inicio + ((fin - inicio) * i) / pasos);
-      const dx = radio * Math.sin(theta);
-      const dy = -radio * Math.cos(theta);
-      const destino = L.latLng(
-        latlng.lat + (180 / Math.PI) * (dy / 6378137),
-        latlng.lng + (180 / Math.PI) * (dx / 6378137) / Math.cos(latlng.lat * Math.PI / 180)
-      );
-      puntos.push(destino);
+    // Funciones auxiliares para la generación de conos de detección
+    function degToRad(deg) {
+        return deg * (Math.PI / 180);
     }
 
-    return puntos;
-  }
+    /**
+     * Genera los puntos de un cono de detección en el mapa.
+     * @param {L.LatLng} latlng - Coordenadas del centro del cono (radar).
+     * @param {number} angulo - Dirección central del cono en grados (0 = Norte).
+     * @param {number} apertura - Apertura del cono en grados.
+     * @param {number} radio - Radio de alcance en metros.
+     * @returns {L.LatLng[]} Array de puntos que forman el cono.
+     */
+    function generarCono(latlng, angulo, apertura, radio) {
+        const puntos = [latlng]; // El primer punto es el centro del radar
+        const pasos = 30; // Número de segmentos para dibujar el arco
+        const inicio = angulo - apertura / 2;
+        const fin = angulo + apertura / 2;
 
-  // Dibujar 4 conos en rojo, cada uno en una dirección cardinal
-  const direcciones = [0, 90, 180, 270]; // Norte, Este, Sur, Oeste
-  const apertura = 54; // grados
-  const alcance = 1200; // metros
+        for (let i = 0; i <= pasos; i++) {
+            // Calcular el ángulo del punto actual en radianes
+            const theta = degToRad(inicio + ((fin - inicio) * i) / pasos);
+            
+            // Calcular el desplazamiento en coordenadas locales
+            const dx = radio * Math.sin(theta);
+            const dy = -radio * Math.cos(theta);
+            
+            // Convertir el desplazamiento a coordenadas geográficas (lat/lng)
+            const destino = L.latLng(
+                latlng.lat + (180 / Math.PI) * (dy / 6378137), // 6378137 es el radio de la Tierra en metros
+                latlng.lng + (180 / Math.PI) * (dx / 6378137) / Math.cos(latlng.lat * Math.PI / 180)
+            );
+            puntos.push(destino);
+        }
+        return puntos;
+    }
 
-  direcciones.forEach(direccion => {
-    const cono = generarCono(L.latLng(radarLat, radarLng), direccion, apertura, alcance);
-    L.polygon(cono, {
-      color: 'red',
-      fillColor: 'red',
-      fillOpacity: 0.25,
-      weight: 1
+    // Dibujar 4 conos direccionales en el mapa
+    const direcciones = [0, 90, 180, 270]; // Norte, Este, Sur, Oeste
+    const apertura = 54; // grados
+    const alcance = 1200; // metros
+
+    direcciones.forEach(direccion => {
+        const cono = generarCono(L.latLng(radarLat, radarLng), direccion, apertura, alcance);
+        L.polygon(cono, {
+            color: 'red',
+            fillColor: 'red',
+            fillOpacity: 0.25,
+            weight: 1
+        }).addTo(map);
+    });
+
+    // Datos de una detección simulada (esto vendría de una API en un escenario real)
+    const deteccion = {
+        lat: radarLat + 0.002,
+        lng: radarLng + 0.003,
+        frecuencia: "2.4 GHz",
+        intensidad: "Alta",
+        antena: "Norte",
+        hora: "12:43:01"
+    };
+
+    // Colocar el marcador del dron detectado
+    L.marker([deteccion.lat, deteccion.lng], { icon: dronIcon })
+        .addTo(map)
+        .bindPopup(`
+            🛸 <b>Detección de dron</b><br>
+            Hora: ${deteccion.hora}<br>
+            Frecuencia: ${deteccion.frecuencia}<br>
+            Intensidad: ${deteccion.intensidad}<br>
+            Antena: ${deteccion.antena}
+        `);
+
+    // Dibujar una línea que conecte el radar con el dron para mostrar la detección
+    L.polyline([[radarLat, radarLng], [deteccion.lat, deteccion.lng]], {
+        color: 'red',
+        weight: 2,
+        dashArray: '5, 5'
     }).addTo(map);
-  });
-
-  // Detección simulada
-  const deteccion = {
-    lat: radarLat + 0.002,
-    lng: radarLng + 0.003,
-    frecuencia: "2.4 GHz",
-    intensidad: "Alta",
-    antena: "Norte",
-    hora: "12:43:01"
-  };
-
-  const dronIcon = L.icon({
-    iconUrl: 'dronIcon.png',
-    iconSize: [30, 30]
-  });
-
-  L.marker([deteccion.lat, deteccion.lng], { icon: dronIcon })
-    .addTo(map)
-    .bindPopup(`
-      🛸 <b>Detección de dron</b><br>
-      Hora: ${deteccion.hora}<br>
-      Frecuencia: ${deteccion.frecuencia}<br>
-      Intensidad: ${deteccion.intensidad}<br>
-      Antena: ${deteccion.antena}
-    `);
-
-  // Flecha dirección detección
-  L.polyline([[radarLat, radarLng], [deteccion.lat, deteccion.lng]], {
-    color: 'red',
-    weight: 2,
-    dashArray: '5, 5'
-  }).addTo(map);
 </script>
 
 </body>
