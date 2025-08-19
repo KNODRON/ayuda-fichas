@@ -1,27 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Radar Pasivo - Movimiento Errático</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body { margin: 0; padding: 0; }
+    #map { height: 100vh; width: 100vw; }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
   const radarLat = -33.447867318202256;
   const radarLng = -70.65718192524163;
   const radarLatLng = L.latLng(radarLat, radarLng);
-  const map = L.map('map').setView([radarLat, radarLng], 15);
 
+  const map = L.map('map').setView([radarLat, radarLng], 15);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
+    attribution: 'Map data © OpenStreetMap contributors'
   }).addTo(map);
 
-  const radarIcon = L.icon({
-    iconUrl: 'radarIcon.png',
-    iconSize: [36, 36]
-  });
+  // Marcador de radar (círculo)
+  const radarMarker = L.circleMarker(radarLatLng, {
+    radius: 10,
+    color: 'blue',
+    fillColor: 'blue',
+    fillOpacity: 0.9
+  }).addTo(map).bindPopup("📡 Radar Pasivo<br><small>Ubicación fija</small>");
 
-  const dronIcon = L.icon({
-    iconUrl: 'dronIcon.png',
-    iconSize: [30, 30]
-  });
-
-  L.marker(radarLatLng, { icon: radarIcon })
-    .addTo(map)
-    .bindPopup("📡 Radar Pasivo<br><small>Cuartel</small>");
-
+  // Círculo de cobertura
   L.circle(radarLatLng, {
     radius: 1200,
     color: '#2ecc71',
@@ -29,14 +41,16 @@
     fillOpacity: 0.2
   }).addTo(map).bindPopup("Radio de cobertura: 1.2 km");
 
-  function degToRad(deg) { return deg * (Math.PI / 180); }
+  // Funciones de geometría
+  function degToRad(deg) {
+    return deg * (Math.PI / 180);
+  }
 
   function generarHaz(latlng, angulo, apertura, radio) {
     const puntos = [latlng];
     const pasos = 20;
     const inicio = angulo - apertura / 2;
     const fin = angulo + apertura / 2;
-
     for (let i = 0; i <= pasos; i++) {
       const theta = degToRad(inicio + ((fin - inicio) * i) / pasos);
       const dx = radio * Math.sin(theta);
@@ -65,6 +79,7 @@
     }).addTo(map);
   });
 
+  // Zona ciega
   const zonaCiega = generarHaz(radarLatLng, 23, 25, 1200);
   L.polygon(zonaCiega, {
     color: "gray",
@@ -74,7 +89,7 @@
     dashArray: "2"
   }).addTo(map).bindPopup("🕳️ Zona ciega hacia Torre Entel");
 
-  // 🛸 Drones con movimiento errático y estelas
+  // Simulación de drones
   const drones = [
     { lat: radarLat - 0.005, lng: radarLng - 0.005, velocidad: 0.0005 },
     { lat: radarLat + 0.006, lng: radarLng - 0.004, velocidad: 0.0006 },
@@ -85,8 +100,12 @@
   const droneTrails = [];
 
   drones.forEach((d, i) => {
-    const marker = L.marker([d.lat, d.lng], { icon: dronIcon }).addTo(map)
-      .bindPopup(`🛸 Dron enemigo #${i + 1}`);
+    const marker = L.circleMarker([d.lat, d.lng], {
+      radius: 6,
+      color: 'black',
+      fillColor: 'black',
+      fillOpacity: 0.8
+    }).addTo(map).bindPopup(`🛸 Dron enemigo #${i + 1}`);
     const trail = L.polyline([[d.lat, d.lng]], { color: 'purple', weight: 2 }).addTo(map);
     droneMarkers.push(marker);
     droneTrails.push(trail);
@@ -94,13 +113,11 @@
 
   setInterval(() => {
     drones.forEach((d, i) => {
-      // Movimiento errático
       const deltaLat = (Math.random() - 0.5) * d.velocidad;
       const deltaLng = (Math.random() - 0.5) * d.velocidad;
       d.lat += deltaLat;
       d.lng += deltaLng;
 
-      // Limitar al rango visible (radio de 1.2 km)
       const distancia = map.distance([radarLat, radarLng], [d.lat, d.lng]);
       if (distancia > 1200) {
         d.lat = radarLat + (Math.random() - 0.5) * 0.02;
@@ -109,12 +126,9 @@
 
       const nuevaPos = [d.lat, d.lng];
       droneMarkers[i].setLatLng(nuevaPos);
-
-      // Agregar a la estela
       const trail = droneTrails[i];
       trail.addLatLng(nuevaPos);
 
-      // Limitar longitud de la estela
       const maxPuntos = 100;
       if (trail.getLatLngs().length > maxPuntos) {
         trail.setLatLngs(trail.getLatLngs().slice(-maxPuntos));
@@ -122,3 +136,6 @@
     });
   }, 300);
 </script>
+
+</body>
+</html>
